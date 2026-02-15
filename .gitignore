@@ -1,0 +1,83 @@
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+secrets.json
+
+# IDE
+.vs/
+.vscode/
+*.swp
+*.swo
+*~
+.idea/
+*.iml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+improvement_cycle_*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+
+# Model files (large)
+*.onnx
+*.pb
+*.h5
+*.pkl
+*.joblib
+models/trained/
+
+# Data files (large)
+data/historical/*.csv
+data/historical/*.parquet
+data/cache/
+
+# Test results
+TestResults/
+coverage/
+
+# Deployment
+publish/
+artifacts/

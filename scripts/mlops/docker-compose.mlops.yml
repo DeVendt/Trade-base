@@ -1,0 +1,177 @@
+version: '3.8'
+
+# MLOps Infrastructure for Trading Platform
+# Includes: MLflow, Prefect, PostgreSQL for ML metadata, MinIO for artifact storage
+
+services:
+  # PostgreSQL for MLflow and Prefect metadata
+  ml-postgres:
+    image: postgres:15-alpine
+    container_name: ml-postgres
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: ${MLFLOW_DB_PASSWORD:-mlflow123}
+      POSTGRES_DB: mlflow
+    volumes:
+      - ml-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - mlops-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO for artifact storage (S3-compatible)
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - mlops-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Create MinIO bucket for MLflow
+  minio-setup:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      /usr/bin/mc config host add minio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin123};
+      /usr/bin/mc mb minio/mlflow || true;
+      /usr/bin/mc policy set public minio/mlflow;
+      exit 0;
+      "
+    networks:
+      - mlops-network
+
+  # MLflow Tracking Server
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.11.0
+    container_name: mlflow
+    depends_on:
+      ml-postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-setup:
+        condition: service_completed_successfully
+    environment:
+      MLFLOW_TRACKING_URI: http://0.0.0.0:5000
+      MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:${MLFLOW_DB_PASSWORD:-mlflow123}@ml-postgres:5432/mlflow
+      --default-artifact-root s3://mlflow
+      --host 0.0.0.0
+      --port 5000
+    ports:
+      - "5000:5000"
+    networks:
+      - mlops-network
+    volumes:
+      - ./mlflow/artifacts:/tmp/mlflow-artifacts
+
+  # Prefect Server (Workflow Orchestration)
+  prefect-server:
+    image: prefect/prefect:2.14.0-python3.11
+    container_name: prefect-server
+    command: prefect server start --host 0.0.0.0
+    environment:
+      PREFECT_API_URL: http://localhost:4200/api
+      PREFECT_SERVER_ANALYTICS_ENABLED: "false"
+    ports:
+      - "4200:4200"
+    networks:
+      - mlops-network
+    volumes:
+      - prefect-data:/root/.prefect
+
+  # Prefect Worker (Executes flows)
+  prefect-worker:
+    image: prefect/prefect:2.14.0-python3.11
+    container_name: prefect-worker
+    depends_on:
+      - prefect-server
+    environment:
+      PREFECT_API_URL: http://prefect-server:4200/api
+    command: >
+      bash -c "
+      pip install mlflow psycopg2-binary scikit-learn pandas numpy &&
+      prefect worker start --pool 'trading-pool' --work-queue 'default'
+      "
+    networks:
+      - mlops-network
+    volumes:
+      - ../src/ImprovementEngine:/app/improvement-engine
+      - ./flows:/app/flows
+    working_dir: /app
+
+  # Jupyter Notebook for experimentation
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    container_name: jupyter
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+    ports:
+      - "8888:8888"
+    networks:
+      - mlops-network
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ../src/ImprovementEngine:/home/jovyan/improvement-engine
+    command: >
+      bash -c "
+      pip install mlflow prefect psycopg2-binary scikit-learn xgboost lightgbm &&
+      start-notebook.sh --NotebookApp.token=''
+      "
+
+  # Model Training Service (Integration with Improvement Engine)
+  model-training:
+    build:
+      context: ../src/ImprovementEngine
+      dockerfile: ../../scripts/mlops/Dockerfile.training
+    container_name: model-training
+    depends_on:
+      - mlflow
+      - prefect-server
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      PREFECT_API_URL: http://prefect-server:4200/api
+      DATABASE_URL: ${DATABASE_URL}
+      DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}
+    networks:
+      - mlops-network
+    volumes:
+      - model-registry:/app/models
+    profiles:
+      - training
+
+volumes:
+  ml-postgres-data:
+  minio-data:
+  prefect-data:
+  model-registry:
+
+networks:
+  mlops-network:
+    driver: bridge

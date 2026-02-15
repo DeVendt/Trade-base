@@ -1,0 +1,212 @@
+name: Continuous Improvement
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  workflow_dispatch:
+    inputs:
+      strategy:
+        description: 'Specific strategy to optimize (leave empty for all)'
+        required: false
+        default: ''
+      full_cycle:
+        description: 'Run full 4-step cycle'
+        required: false
+        default: 'true'
+
+env:
+  PYTHON_VERSION: '3.12'
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+jobs:
+  analyze:
+    name: Step 1 - Analyze Performance
+    runs-on: ubuntu-latest
+    outputs:
+      has_opportunities: ${{ steps.analysis.outputs.has_opportunities }}
+      strategy_id: ${{ steps.analysis.outputs.strategy_id }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Run Analysis
+        id: analysis
+        run: |
+          python scripts/automation/run_improvement_cycle.py --step analyze \
+            --strategy "${{ github.event.inputs.strategy }}" \
+            --output analysis_result.json
+          
+          # Check if improvements needed
+          if grep -q '"recommendations_count": 0' analysis_result.json 2>/dev/null; then
+            echo "has_opportunities=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_opportunities=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload Analysis Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-results
+          path: analysis_result.json
+        if: always()
+      
+      - name: Notify Discord
+        if: always()
+        run: |
+          python scripts/automation/notify_discord.py \
+            --step "analyze" \
+            --status "${{ job.status }}" \
+            --webhook "${{ secrets.DISCORD_WEBHOOK_URL }}" || true
+
+  identify:
+    name: Step 2 - Identify Opportunities
+    needs: analyze
+    if: needs.analyze.outputs.has_opportunities == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      optimizations_needed: ${{ steps.identify.outputs.optimizations_needed }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Download Analysis
+        uses: actions/download-artifact@v4
+        with:
+          name: analysis-results
+      
+      - name: Identify Improvements
+        id: identify
+        run: |
+          python scripts/automation/run_improvement_cycle.py --step identify \
+            --input analysis_result.json \
+            --output identify_result.json
+      
+      - name: Upload Identify Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: identify-results
+          path: identify_result.json
+        if: always()
+      
+      - name: Notify Discord
+        if: always()
+        run: |
+          python scripts/automation/notify_discord.py \
+            --step "identify" \
+            --status "${{ job.status }}" \
+            --webhook "${{ secrets.DISCORD_WEBHOOK_URL }}" || true
+
+  optimize:
+    name: Step 3 - Execute Optimizations
+    needs: identify
+    runs-on: ubuntu-latest
+    outputs:
+      can_deploy: ${{ steps.optimize.outputs.can_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Download Previous Results
+        uses: actions/download-artifact@v4
+        with:
+          name: identify-results
+      
+      - name: Run Optimizations
+        id: optimize
+        run: |
+          python scripts/automation/run_improvement_cycle.py --step optimize \
+            --input identify_result.json \
+            --output optimize_result.json
+          
+          # Check if backtests passed
+          if grep -q '"backtest_passed": true' optimize_result.json 2>/dev/null; then
+            echo "can_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "can_deploy=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Upload Optimize Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: optimize-results
+          path: optimize_result.json
+        if: always()
+      
+      - name: Notify Discord
+        if: always()
+        run: |
+          python scripts/automation/notify_discord.py \
+            --step "optimize" \
+            --status "${{ job.status }}" \
+            --webhook "${{ secrets.DISCORD_WEBHOOK_URL }}" || true
+
+  deploy:
+    name: Step 4 - Deploy with A/B Testing
+    needs: optimize
+    if: needs.optimize.outputs.can_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Download Optimization Results
+        uses: actions/download-artifact@v4
+        with:
+          name: optimize-results
+      
+      - name: Deploy to Production
+        run: |
+          python scripts/automation/run_improvement_cycle.py --step deploy \
+            --input optimize_result.json \
+            --output deploy_result.json
+      
+      - name: Upload Deploy Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-results
+          path: deploy_result.json
+        if: always()
+      
+      - name: Notify Discord
+        if: always()
+        run: |
+          python scripts/automation/notify_discord.py \
+            --step "deploy" \
+            --status "${{ job.status }}" \
+            --webhook "${{ secrets.DISCORD_WEBHOOK_URL }}" || true
+
+  summary:
+    name: Send Summary Report
+    needs: [analyze, identify, optimize, deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Notify Completion
+        run: |
+          echo "Continuous improvement cycle completed"
+          echo "Check artifacts for detailed results"
