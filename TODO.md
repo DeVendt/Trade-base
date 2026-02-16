@@ -180,6 +180,91 @@
 - [ ] Paper trade with AI for 2 weeks
 - [ ] Optimize model thresholds
 
+---
+
+## ⏸️ Continuous Improvement Workflow - PAUSED
+
+> **Status:** `PAUSED` - Workflow disabled until prerequisites are met  
+> **Last Updated:** 2026-02-16  
+> **Action Required:** Complete all items below before re-enabling
+
+### Why It's Paused
+The GitHub Actions workflow (`.github/workflows/continuous-improvement.yml`) is currently running with **mock/fake data** - it simulates improvement but doesn't actually analyze real trades or improve anything. The scheduled cron trigger has been disabled.
+
+### Prerequisites to Re-enable
+
+Before restarting the workflow, the following must be implemented:
+
+#### 1. Database Infrastructure (🔴 Critical)
+- [ ] Create PostgreSQL/TimescaleDB instance
+- [ ] Run migration scripts from `docs/improvement-system/01-analytics-schema.md`
+- [ ] Set up `DATABASE_URL` secret in GitHub repository settings
+- [ ] Verify database connection from GitHub Actions
+
+#### 2. Trade Data Collection (🔴 Critical)
+- [ ] Implement `trade_outcomes` table logging (actual trade results)
+- [ ] Log every executed trade with: entry/exit prices, P&L, commissions, slippage
+- [ ] Ensure minimum 100+ historical trades before first analysis
+- [ ] Set up `model_predictions` logging for accuracy tracking
+
+#### 3. Real Data Queries (🔴 Critical)
+- [ ] Replace mock methods in `optimization_runner.py`:
+  - [ ] `_get_trade_stats()` - Query actual trade statistics from DB
+  - [ ] `_get_strategy_performance()` - Query `strategy_performance` table
+  - [ ] `_get_model_performance()` - Query `model_performance` table
+  - [ ] `_get_regime_performance()` - Query market regime data
+- [ ] Add proper database connection handling in `OptimizationRunner`
+
+#### 4. Model Training Pipeline (🟠 High)
+- [ ] Implement actual model retraining (not mock)
+- [ ] Set up Optuna for hyperparameter optimization
+- [ ] Create backtesting framework integration
+- [ ] Store trained models with versioning
+
+#### 5. A/B Testing Infrastructure (🟠 High)
+- [ ] Implement real A/B test deployment (not simulation)
+- [ ] Set up traffic splitting mechanism
+- [ ] Create A/B test monitoring and metrics collection
+- [ ] Implement automatic rollback on degradation
+
+#### 6. Secrets & Configuration (🟡 Medium)
+- [ ] Set `DISCORD_WEBHOOK_URL` in GitHub secrets (for notifications)
+- [ ] Configure production environment protection rules
+- [ ] Set up environment-specific configuration
+
+### Restart Instructions
+
+Once all prerequisites are complete:
+
+1. **Uncomment the schedule trigger** in `.github/workflows/continuous-improvement.yml`:
+   ```yaml
+   on:
+     schedule:
+       - cron: '0 * * * *'  # Run every hour
+     workflow_dispatch:
+   ```
+
+2. **Verify with manual run first:**
+   ```bash
+   gh workflow run "Continuous Improvement"
+   ```
+
+3. **Monitor the first few runs** to ensure real data is being processed
+
+4. **Update this TODO section** to mark as complete
+
+### Current Workflow Status
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Workflow file | ✅ Functional | Runs successfully but with fake data |
+| Scheduled runs | ⏸️ Disabled | Cron commented out |
+| Manual trigger | ✅ Available | Can still run manually for testing |
+| Database queries | ❌ Mock only | Returns hardcoded values |
+| Trade logging | ❌ Not implemented | No real trade data captured |
+| Model training | ❌ Mock only | No actual retraining occurs |
+| A/B testing | ❌ Simulated only | No real deployment or traffic split |
+
 ## 📝 Notes
 
 - Start with **ES (E-mini S&P 500)** only - most liquid

@@ -1,9 +1,11 @@
 name: Continuous Improvement
 
 on:
-  schedule:
-    # Run every hour
-    - cron: '0 * * * *'
+  # PAUSED: Scheduled runs disabled until real data/training pipeline is ready
+  # See TODO.md section "Continuous Improvement Workflow - PAUSED"
+  # schedule:
+  #   # Run every hour
+  #   - cron: '0 * * * *'
   workflow_dispatch:
     inputs:
       strategy:
