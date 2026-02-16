@@ -112,7 +112,9 @@
   - [ ] Docker containerization
   - [ ] CI/CD pipeline (GitHub Actions)
   - [ ] Database migrations
-  - [ ] Secrets management
+  - [x] Secrets management framework (see SECRETS.md)
+  - [ ] Set up GitHub repository secrets
+  - [ ] Document all secrets in password manager
 
 ## 📝 Immediate Next Steps (This Week)
 
@@ -147,6 +149,20 @@
    ```python
    # Test all notification types
    python scripts/test_notifications.py
+   ```
+
+5. **Set Up Secrets Management**
+   ```bash
+   # Copy template and fill in secrets
+   cp .env.example .env
+   nano .env  # Edit with your secrets
+   
+   # Check required secrets
+   python scripts/manage_secrets.py --check
+   
+   # Sync to GitHub (when ready)
+   python scripts/manage_secrets.py --sync-to-github --dry-run  # Preview first
+   python scripts/manage_secrets.py --sync-to-github           # Actually sync
    ```
 
 ## 🎓 Learning Resources Needed
