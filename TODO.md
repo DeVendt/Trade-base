@@ -113,8 +113,16 @@
   - [ ] CI/CD pipeline (GitHub Actions)
   - [ ] Database migrations
   - [x] Secrets management framework (see SECRETS.md)
+  - [ ] **Set up Password Manager for Team Secrets**
+    - [ ] Evaluate options: Keeper vs 1Password vs Bitwarden
+    - [ ] Create shared vault/folder for TradeBase secrets
+    - [ ] Import existing secrets from local .env files
+    - [ ] Set up team access permissions (who can view/edit)
+    - [ ] Document record naming conventions in SECRETS.md
+    - [ ] Create automated export script for CI/CD integration
+    - [ ] Train team members on usage
   - [ ] Set up GitHub repository secrets
-  - [ ] Document all secrets in password manager
+  - [ ] Sync password manager secrets to GitHub for Actions
 
 ## 📝 Immediate Next Steps (This Week)
 
