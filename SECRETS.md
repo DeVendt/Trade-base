@@ -113,7 +113,79 @@ gh secret delete DATABASE_URL
 
 **Best for:** Team collaboration, shared secrets
 
-**Setup with 1Password:**
+#### Keeper (Recommended for Enterprise)
+
+**Setup:**
+```bash
+# Install Keeper Commander CLI
+pip install keepercommander
+# Or: brew install keepercommander
+
+# Login to Keeper
+keeper shell
+
+# Create a shared folder for TradeBase
+cd /TradeBase
+mkdir Secrets
+
+# Add secrets to Keeper
+echo "postgresql://..." | keeper add --folder Secrets --title "Database URL" --custom "value"
+keeper add --folder Secrets --title "Discord Webhook" --custom "url=https://discord.com/api/webhooks/..."
+keeper add --folder Secrets --folder Secrets --title "NinjaTrader API Key" --custom "api_key=..."
+
+# Export all secrets to .env
+keeper export --format env --folder Secrets > .env
+
+# Or load specific secrets
+export DATABASE_URL=$(keeper get --format text Secrets/"Database URL" value)
+export DISCORD_WEBHOOK_URL=$(keeper get --format text Secrets/"Discord Webhook" url)
+```
+
+**Automated Loading with Script:**
+```bash
+# Create a script to load all TradeBase secrets from Keeper
+#!/bin/bash
+# load_keeper_secrets.sh
+FOLDER="Secrets"
+
+echo "Loading TradeBase secrets from Keeper..."
+export DATABASE_URL=$(keeper get --format text "$FOLDER/Database URL" value 2>/dev/null)
+export DISCORD_WEBHOOK_URL=$(keeper get --format text "$FOLDER/Discord Webhook" url 2>/dev/null)
+export NINJATRADER_API_KEY=$(keeper get --format text "$FOLDER/NinjaTrader API Key" api_key 2>/dev/null)
+# Add more secrets as needed
+
+echo "Loaded secrets from Keeper folder: $FOLDER"
+```
+
+**Sync Keeper to GitHub:**
+```bash
+# Use our management script with Keeper backend
+python scripts/manage_secrets.py --keeper-sync-to-github --dry-run  # Preview
+python scripts/manage_secrets.py --keeper-sync-to-github            # Actually sync
+
+# Export from Keeper to local .env
+python scripts/manage_secrets.py --keeper-export --keeper-folder Secrets
+
+# Import from local .env to Keeper
+python scripts/manage_secrets.py --keeper-import --keeper-folder Secrets
+```
+
+**Pros:**
+- Enterprise-grade security with zero-knowledge encryption
+- Fine-grained access controls and sharing
+- Audit logs for compliance
+- CLI integration for automation
+- Works offline after initial sync
+
+**Cons:**
+- Requires Keeper subscription
+- Learning curve for CLI usage
+
+---
+
+#### 1Password
+
+**Setup:**
 ```bash
 # Install 1Password CLI: https://developer.1password.com/docs/cli/
 
@@ -125,7 +197,9 @@ eval $(op signin)
 export DATABASE_URL=$(op item get "TradeBase DB" --field password)
 ```
 
-**Setup with Bitwarden:**
+#### Bitwarden
+
+**Setup:**
 ```bash
 # Install Bitwarden CLI: https://bitwarden.com/help/cli/
 

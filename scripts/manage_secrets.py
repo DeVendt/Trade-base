@@ -5,12 +5,14 @@ Secrets Management Utility for Trade Base
 This script helps manage secrets across:
 - Local .env files
 - GitHub repository secrets
+- Keeper Password Manager
 - Encrypted backups
 
 Usage:
     python manage_secrets.py --list
     python manage_secrets.py --sync-to-github
     python manage_secrets.py --check
+    python manage_secrets.py --keeper-sync-to-github
 """
 
 import argparse
@@ -288,7 +290,185 @@ class SecretsManager:
         }
         
         print("\nThis would generate a new .env.example file.")
-        print("For now, please manually update .env.example with any new secrets.")
+        print("For now, please manually update .env.example with any new secrets.
+    
+    # ==================== Keeper Password Manager Methods ====================
+    
+    def _keeper_check_installed(self) -> bool:
+        """Check if Keeper CLI is installed."""
+        try:
+            subprocess.run(['keeper', '--version'], capture_output=True, check=True)
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            return False
+    
+    def keeper_export_to_env(self, folder: str = 'Secrets', dry_run: bool = True) -> None:
+        """Export secrets from Keeper to local .env file."""
+        print("\n" + "=" * 70)
+        print(f"EXPORT FROM KEEPER {'(DRY RUN)' if dry_run else ''}")
+        print("=" * 70)
+        
+        if not self._keeper_check_installed():
+            print("\n❌ Keeper CLI not found.")
+            print("   Install with: pip install keepercommander")
+            print("   Or: brew install keepercommander")
+            print("   Docs: https://docs.keeper.io/secrets-manager/commander-cli")
+            return
+        
+        print(f"\n📁 Keeper Folder: {folder}")
+        print("\nExpected secret structure in Keeper:")
+        print("  - Database URL (custom field: 'value')")
+        print("  - Discord Webhook (custom field: 'url')")
+        print("  - NinjaTrader API Key (custom field: 'api_key')")
+        print("\nTo set up Keeper secrets, run:")
+        print(f"  keeper shell")
+        print(f"  cd /{folder}")
+        print(f"  add --title \"Database URL\" --custom \"value=postgresql://...\"")
+        
+        if dry_run:
+            print("\n⚠️  Dry run - no changes made.")
+            print("   Use --keeper-export without --dry-run to actually export.")
+            return
+        
+        # Map of Keeper titles to env var names
+        keeper_mapping = {
+            'Database URL': ('DATABASE_URL', 'value'),
+            'Discord Webhook': ('DISCORD_WEBHOOK_URL', 'url'),
+            'NinjaTrader API Key': ('NINJATRADER_API_KEY', 'api_key'),
+            'NinjaTrader API Secret': ('NINJATRADER_API_SECRET', 'secret'),
+            'AWS Access Key': ('AWS_ACCESS_KEY_ID', 'access_key'),
+            'AWS Secret Key': ('AWS_SECRET_ACCESS_KEY', 'secret_key'),
+            'JWT Secret': ('JWT_SECRET_KEY', 'secret'),
+        }
+        
+        env_updates = []
+        errors = []
+        
+        for title, (env_var, field) in keeper_mapping.items():
+            try:
+                result = subprocess.run(
+                    ['keeper', 'get', '--format', 'text', f"{folder}/{title}", field],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                value = result.stdout.strip()
+                if value:
+                    env_updates.append((env_var, value))
+                    print(f"  ✅ Retrieved: {title} → {env_var}")
+            except subprocess.CalledProcessError:
+                errors.append(title)
+                print(f"  ⚠️  Not found: {title}")
+        
+        if env_updates:
+            with open(self.env_file, 'a') as f:
+                f.write(f"\n# Exported from Keeper folder: {folder}\n")
+                for key, value in env_updates:
+                    f.write(f"{key}={value}\n")
+            print(f"\n✅ Updated .env with {len(env_updates)} secrets from Keeper")
+        
+        if errors:
+            print(f"\n⚠️  {len(errors)} secrets not found in Keeper (see list above)")
+    
+    def keeper_sync_to_github(self, folder: str = 'Secrets', dry_run: bool = True) -> None:
+        """Sync secrets from Keeper directly to GitHub (bypassing local .env)."""
+        print("\n" + "=" * 70)
+        print(f"KEEPER → GITHUB SYNC {'(DRY RUN)' if dry_run else ''}")
+        print("=" * 70)
+        
+        if not self._keeper_check_installed():
+            print("\n❌ Keeper CLI not found.")
+            print("   Install with: pip install keepercommander")
+            return
+        
+        # Only sync secrets safe for GitHub
+        github_safe_mapping = {
+            'Database URL': ('DATABASE_URL', 'value'),
+            'Discord Webhook': ('DISCORD_WEBHOOK_URL', 'url'),
+        }
+        
+        print(f"\n📁 Keeper Folder: {folder}")
+        print(f"Secrets to sync: {len(github_safe_mapping)}")
+        print("(Skipping local-only secrets like API keys)")
+        
+        for title, (env_var, field) in github_safe_mapping.items():
+            try:
+                result = subprocess.run(
+                    ['keeper', 'get', '--format', 'text', f"{folder}/{title}", field],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                value = result.stdout.strip()
+                
+                if dry_run:
+                    masked = value[:4] + "***" + value[-4:] if len(value) > 8 else "****"
+                    print(f"  Would sync: {title} → {env_var} = {masked}")
+                else:
+                    # Set in GitHub
+                    gh_result = subprocess.run(
+                        ['gh', 'secret', 'set', env_var],
+                        input=value,
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    print(f"  ✅ Synced: {title} → GitHub Secret: {env_var}")
+                    
+            except subprocess.CalledProcessError as e:
+                print(f"  ❌ Failed: {title} - {e.stderr}")
+            except FileNotFoundError:
+                print("  ❌ GitHub CLI (gh) not found. Install from: https://cli.github.com/")
+                return
+        
+        if dry_run:
+            print("\n⚠️  This was a dry run. Use --keeper-sync-to-github (without --dry-run) to actually sync.")
+    
+    def keeper_import_from_env(self, folder: str = 'Secrets', dry_run: bool = True) -> None:
+        """Import secrets from .env to Keeper."""
+        print("\n" + "=" * 70)
+        print(f"IMPORT TO KEEPER {'(DRY RUN)' if dry_run else ''}")
+        print("=" * 70)
+        
+        if not self._keeper_check_installed():
+            print("\n❌ Keeper CLI not found.")
+            print("   Install with: pip install keepercommander")
+            return
+        
+        print(f"\n📁 Target Keeper Folder: {folder}")
+        print(f"Secrets to import: {len(self.secrets)}")
+        
+        # Reverse mapping for import
+        env_to_keeper = {
+            'DATABASE_URL': ('Database URL', 'value'),
+            'DISCORD_WEBHOOK_URL': ('Discord Webhook', 'url'),
+            'NINJATRADER_API_KEY': ('NinjaTrader API Key', 'api_key'),
+            'NINJATRADER_API_SECRET': ('NinjaTrader API Secret', 'secret'),
+        }
+        
+        for env_var, value in self.secrets.items():
+            if env_var not in env_to_keeper:
+                continue
+                
+            title, field = env_to_keeper[env_var]
+            
+            if dry_run:
+                print(f"  Would create: {title} with {field}")
+            else:
+                try:
+                    # Create record in Keeper
+                    subprocess.run(
+                        ['keeper', 'add', '--folder', folder, '--title', title, 
+                         '--custom', f"{field}={value}"],
+                        capture_output=True,
+                        check=True
+                    )
+                    print(f"  ✅ Created: {title}")
+                except subprocess.CalledProcessError as e:
+                    print(f"  ❌ Failed to create {title}: {e.stderr}")
+        
+        if dry_run:
+            print("\n⚠️  This was a dry run. Use --keeper-import (without --dry-run) to actually import.")
 
 
 def main():
@@ -303,6 +483,9 @@ Examples:
   %(prog)s --sync-to-github --dry-run      # Preview GitHub sync
   %(prog)s --sync-to-github                # Actually sync to GitHub
   %(prog)s --sync-from-github              # Sync from GitHub to .env
+  %(prog)s --keeper-export                 # Export from Keeper to .env
+  %(prog)s --keeper-sync-to-github         # Sync Keeper → GitHub
+  %(prog)s --keeper-import                 # Import .env → Keeper
         """
     )
     
@@ -318,6 +501,14 @@ Examples:
                        help='Sync secrets from .env to GitHub')
     parser.add_argument('--sync-from-github', action='store_true',
                        help='Sync secrets from GitHub to .env')
+    parser.add_argument('--keeper-export', action='store_true',
+                       help='Export secrets from Keeper Password Manager to .env')
+    parser.add_argument('--keeper-import', action='store_true',
+                       help='Import secrets from .env to Keeper Password Manager')
+    parser.add_argument('--keeper-sync-to-github', action='store_true',
+                       help='Sync secrets directly from Keeper to GitHub (bypass local .env)')
+    parser.add_argument('--keeper-folder', default='Secrets',
+                       help='Keeper folder name (default: Secrets)')
     parser.add_argument('--dry-run', '-n', action='store_true',
                        help='Show what would be done without making changes')
     parser.add_argument('--generate-example', action='store_true',
@@ -326,7 +517,11 @@ Examples:
     args = parser.parse_args()
     
     # Default action if none specified
-    if not any([args.list, args.check, args.sync_to_github, args.sync_from_github, args.generate_example]):
+    keeper_actions = [args.keeper_export, args.keeper_import, args.keeper_sync_to_github]
+    github_actions = [args.sync_to_github, args.sync_from_github]
+    other_actions = [args.list, args.check, args.generate_example]
+    
+    if not any(keeper_actions + github_actions + other_actions):
         args.list = True
     
     manager = SecretsManager(env_file=args.env_file)
@@ -344,6 +539,15 @@ Examples:
     
     if args.sync_from_github:
         manager.sync_from_github(dry_run=args.dry_run)
+    
+    if args.keeper_export:
+        manager.keeper_export_to_env(folder=args.keeper_folder, dry_run=args.dry_run)
+    
+    if args.keeper_import:
+        manager.keeper_import_from_env(folder=args.keeper_folder, dry_run=args.dry_run)
+    
+    if args.keeper_sync_to_github:
+        manager.keeper_sync_to_github(folder=args.keeper_folder, dry_run=args.dry_run)
     
     if args.generate_example:
         manager.generate_env_example()
