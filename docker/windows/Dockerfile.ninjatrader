@@ -1,0 +1,62 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+LABEL maintainer="TradeBase Team"
+LABEL description="NinjaTrader 8 with TradeBase Strategy in Windows Container"
+
+# Install .NET 8 Runtime
+ADD https://download.visualstudio.microsoft.com/download/pr/39584cca-f4f4-4f52-b3f9-e1f5c5a37f95/17f3c5046d67d42fb2c663c578927c59/dotnet-runtime-8.0.1-win-x64.exe C:/temp/dotnet-installer.exe
+RUN C:/temp/dotnet-installer.exe /quiet /install && \
+    del C:/temp/dotnet-installer.exe
+
+# Install .NET Framework (required for NinjaTrader)
+RUN powershell -Command \
+    Install-WindowsFeature -Name Net-Framework-Core -Source C:/Windows/WinSxS ; \
+    Install-WindowsFeature -Name Net-Framework-45-Core -Source C:/Windows/WinSxS
+
+# Install Visual C++ Redistributables
+ADD https://aka.ms/vs/17/release/vc_redist.x64.exe C:/temp/vc_redist.exe
+RUN C:/temp/vc_redist.exe /quiet /install && \
+    del C:/temp/vc_redist.exe
+
+# Set up NinjaTrader directory structure
+RUN mkdir C:/NinjaTrader8/bin/Custom && \
+    mkdir C:/NinjaTrader8/bin/Strategy && \
+    mkdir C:/NinjaTrader8/db && \
+    mkdir C:/NinjaTrader8/log && \
+    mkdir C:/Bridge && \
+    mkdir C:/scripts
+
+# Copy NinjaTrader installation files
+# NOTE: You must have NinjaTrader installed locally and copy these files
+# COPY NinjaTrader8/bin/ C:/NinjaTrader8/bin/
+# COPY NinjaTrader8/NinjaTrader.Core.dll C:/NinjaTrader8/
+
+# Copy TradeBase Strategy DLL
+COPY ninjatrader/Strategy/TradeBase.Strategy.dll C:/NinjaTrader8/bin/Custom/
+COPY ninjatrader/Strategy/TradeBase.Strategy.dll C:/NinjaTrader8/bin/Strategy/
+
+# Copy Bridge Service
+COPY ninjatrader/Bridge/ C:/Bridge/
+
+# Copy startup and healthcheck scripts
+COPY scripts/windows/start.ps1 C:/scripts/
+COPY scripts/windows/healthcheck.ps1 C:/scripts/
+
+# Copy configuration
+COPY config/ninjatrader/ C:/NinjaTrader8/config/
+
+# Expose ports
+# 7497 - IB Gateway (if using IB)
+# 50051 - TradeBase Bridge gRPC
+# 50052 - TradeBase Bridge HTTP
+EXPOSE 7497 50051 50052
+
+# Set working directory
+WORKDIR C:/NinjaTrader8
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD powershell -File C:/scripts/healthcheck.ps1
+
+# Start script
+CMD ["powershell", "-ExecutionPolicy", "Bypass", "-File", "C:/scripts/start.ps1"]

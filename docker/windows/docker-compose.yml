@@ -1,0 +1,176 @@
+version: '2.4'  # Windows containers require 2.x syntax
+
+# TradeBase Windows Container Stack
+# Run multiple NinjaTrader instances, one per market
+
+services:
+  # ES Market Instance
+  ninjatrader-es:
+    build:
+      context: ../..
+      dockerfile: docker/windows/Dockerfile.ninjatrader
+    image: tradebase/ninjatrader:latest
+    container_name: ninjatrader-es
+    hostname: ninjatrader-es
+    environment:
+      - SYMBOL=ES
+      - ACCOUNT=Sim101
+      - TRADING_MODE=PAPER
+      - RISK_PER_TRADE=1.0
+    ports:
+      - "50051:50051"  # gRPC
+      - "50052:50052"  # HTTP/REST
+    volumes:
+      - nt-es-data:C:/NinjaTrader8/db
+      - nt-es-logs:C:/NinjaTrader8/log
+      - ../../config/ninjatrader:C:/NinjaTrader8/config:ro
+    networks:
+      - tradebase-network
+    restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "powershell", "-File", "C:/scripts/healthcheck.ps1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # NQ Market Instance
+  ninjatrader-nq:
+    build:
+      context: ../..
+      dockerfile: docker/windows/Dockerfile.ninjatrader
+    image: tradebase/ninjatrader:latest
+    container_name: ninjatrader-nq
+    hostname: ninjatrader-nq
+    environment:
+      - SYMBOL=NQ
+      - ACCOUNT=Sim101
+      - TRADING_MODE=PAPER
+      - RISK_PER_TRADE=1.0
+    ports:
+      - "50061:50051"
+      - "50062:50052"
+    volumes:
+      - nt-nq-data:C:/NinjaTrader8/db
+      - nt-nq-logs:C:/NinjaTrader8/log
+      - ../../config/ninjatrader:C:/NinjaTrader8/config:ro
+    networks:
+      - tradebase-network
+    restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "powershell", "-File", "C:/scripts/healthcheck.ps1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # YM Market Instance
+  ninjatrader-ym:
+    build:
+      context: ../..
+      dockerfile: docker/windows/Dockerfile.ninjatrader
+    image: tradebase/ninjatrader:latest
+    container_name: ninjatrader-ym
+    hostname: ninjatrader-ym
+    environment:
+      - SYMBOL=YM
+      - ACCOUNT=Sim101
+      - TRADING_MODE=PAPER
+      - RISK_PER_TRADE=1.0
+    ports:
+      - "50071:50051"
+      - "50072:50052"
+    volumes:
+      - nt-ym-data:C:/NinjaTrader8/db
+      - nt-ym-logs:C:/NinjaTrader8/log
+      - ../../config/ninjatrader:C:/NinjaTrader8/config:ro
+    networks:
+      - tradebase-network
+    restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
+    healthcheck:
+      test: ["CMD", "powershell", "-File", "C:/scripts/healthcheck.ps1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Trading Engine (Linux - can connect to Windows containers via network)
+  trading-engine:
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile.trading
+    image: tradebase/trading-engine:latest
+    container_name: trading-engine
+    environment:
+      - ES_BRIDGE_HOST=ninjatrader-es
+      - ES_BRIDGE_PORT=50051
+      - NQ_BRIDGE_HOST=ninjatrader-nq
+      - NQ_BRIDGE_PORT=50051
+      - YM_BRIDGE_HOST=ninjatrader-ym
+      - YM_BRIDGE_PORT=50051
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=tradebase
+      - DB_USER=tradebase
+      - DB_PASSWORD=${DB_PASSWORD:-tradebase}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+    depends_on:
+      - ninjatrader-es
+      - ninjatrader-nq
+      - ninjatrader-ym
+      - postgres
+      - redis
+    networks:
+      - tradebase-network
+    restart: unless-stopped
+
+  # PostgreSQL Database (Windows container or use external)
+  # For production, use Azure SQL or external Postgres
+  postgres:
+    image: mcr.microsoft.com/windows/servercore:ltsc2022
+    container_name: tradebase-postgres
+    command: powershell -Command "Write-Host 'PostgreSQL placeholder - install and configure PostgreSQL for Windows'"
+    volumes:
+      - postgres-data:C:/postgres/data
+    networks:
+      - tradebase-network
+
+  # Redis Cache
+  redis:
+    image: mcr.microsoft.com/windows/servercore:ltsc2022
+    container_name: tradebase-redis
+    command: powershell -Command "Write-Host 'Redis placeholder - install and configure Redis for Windows'"
+    volumes:
+      - redis-data:C:/redis/data
+    networks:
+      - tradebase-network
+
+networks:
+  tradebase-network:
+    driver: nat
+
+volumes:
+  nt-es-data:
+    driver: local
+  nt-es-logs:
+    driver: local
+  nt-nq-data:
+    driver: local
+  nt-nq-logs:
+    driver: local
+  nt-ym-data:
+    driver: local
+  nt-ym-logs:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
