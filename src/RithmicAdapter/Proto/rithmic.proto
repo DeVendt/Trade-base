@@ -1,0 +1,168 @@
+# Rithmic Bridge Proto Definitions
+# gRPC service for cross-platform Rithmic communication
+
+syntax = "proto3";
+
+option csharp_namespace = "TradeBase.Rithmic.Proto";
+
+package rithmic;
+
+// Market Data Service
+service MarketDataService {
+  rpc SubscribePrice (SymbolRequest) returns (stream PriceUpdate);
+  rpc SubscribeBars (BarSubscriptionRequest) returns (stream BarUpdate);
+  rpc GetCurrentPrice (SymbolRequest) returns (PriceUpdate);
+  rpc GetMarketDepth (SymbolRequest) returns (MarketDepth);
+}
+
+// Order Execution Service
+service OrderExecutionService {
+  rpc SubmitOrder (OrderRequest) returns (OrderResponse);
+  rpc CancelOrder (OrderIdRequest) returns (OrderResponse);
+  rpc ModifyOrder (ModifyOrderRequest) returns (OrderResponse);
+  rpc GetOrderStatus (OrderIdRequest) returns (OrderResponse);
+  rpc StreamOrderUpdates (Empty) returns (stream OrderUpdate);
+}
+
+// Account Service
+service AccountService {
+  rpc GetAccountInfo (AccountRequest) returns (AccountInfo);
+  rpc GetPositions (AccountRequest) returns (PositionList);
+  rpc StreamAccountUpdates (AccountRequest) returns (stream AccountUpdate);
+}
+
+// Connection Service
+service ConnectionService {
+  rpc Connect (ConnectRequest) returns (ConnectionStatus);
+  rpc Disconnect (Empty) returns (ConnectionStatus);
+  rpc GetStatus (Empty) returns (ConnectionStatus);
+  rpc StreamConnectionStatus (Empty) returns (stream ConnectionStatus);
+}
+
+// Messages
+message Empty {}
+
+message SymbolRequest {
+  string symbol = 1;
+  string exchange = 2;  // CME, CBOT, etc.
+}
+
+message BarSubscriptionRequest {
+  string symbol = 1;
+  int32 interval_minutes = 2;
+}
+
+message PriceUpdate {
+  string symbol = 1;
+  double bid = 2;
+  double ask = 3;
+  double last = 4;
+  int64 volume = 5;
+  int64 timestamp = 6;  // Unix milliseconds
+}
+
+message BarUpdate {
+  string symbol = 1;
+  int64 timestamp = 2;
+  double open = 3;
+  double high = 4;
+  double low = 5;
+  double close = 6;
+  int64 volume = 7;
+}
+
+message MarketDepth {
+  string symbol = 1;
+  repeated PriceLevel bids = 2;
+  repeated PriceLevel asks = 3;
+}
+
+message PriceLevel {
+  double price = 1;
+  int64 size = 2;
+}
+
+message OrderRequest {
+  string order_id = 1;
+  string symbol = 2;
+  string action = 3;  // BUY, SELL
+  string order_type = 4;  // MARKET, LIMIT, STOP
+  int32 quantity = 5;
+  double limit_price = 6;
+  double stop_price = 7;
+  string account = 8;
+  string tif = 9;  // DAY, GTC, IOC
+}
+
+message OrderResponse {
+  string order_id = 1;
+  string status = 2;  // PENDING, WORKING, FILLED, CANCELLED, REJECTED
+  string message = 3;
+  int32 filled_quantity = 4;
+  double avg_fill_price = 5;
+  int64 timestamp = 6;
+}
+
+message OrderUpdate {
+  string order_id = 1;
+  string status = 2;
+  int32 filled_quantity = 3;
+  double avg_fill_price = 4;
+  int64 timestamp = 5;
+}
+
+message OrderIdRequest {
+  string order_id = 1;
+}
+
+message ModifyOrderRequest {
+  string order_id = 1;
+  int32 new_quantity = 2;
+  double new_limit_price = 3;
+  double new_stop_price = 4;
+}
+
+message AccountRequest {
+  string account_id = 1;
+}
+
+message AccountInfo {
+  string account_id = 1;
+  double cash_balance = 2;
+  double buying_power = 3;
+  double realized_pnl = 4;
+  double unrealized_pnl = 5;
+  double total_pnl = 6;
+}
+
+message Position {
+  string symbol = 1;
+  string account_id = 2;
+  string direction = 3;  // LONG, SHORT, FLAT
+  int32 quantity = 4;
+  double avg_price = 5;
+  double unrealized_pnl = 6;
+}
+
+message PositionList {
+  repeated Position positions = 1;
+}
+
+message AccountUpdate {
+  string account_id = 1;
+  double unrealized_pnl = 2;
+  double realized_pnl = 3;
+}
+
+message ConnectRequest {
+  string username = 1;
+  string password = 2;
+  string server = 3;  // Rithmic-Apex, Rithmic-Chicago, etc.
+}
+
+message ConnectionStatus {
+  bool connected = 1;
+  string state = 2;  // DISCONNECTED, CONNECTING, CONNECTED, ERROR
+  string message = 3;
+  int64 last_heartbeat = 4;
+}

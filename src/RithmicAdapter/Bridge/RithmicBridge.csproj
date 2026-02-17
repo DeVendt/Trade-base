@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>TradeBase.RithmicAdapter.Bridge</RootNamespace>
+    <AssemblyName>RithmicBridge</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.59.0" />
+    <PackageReference Include="Grpc.AspNetCore.Server" Version="2.59.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- Proto files -->
+  <ItemGroup>
+    <Protobuf Include="..\Proto\rithmic.proto" GrpcServices="Server" />
+  </ItemGroup>
+
+  <!-- Rithmic R|API+ reference (commented until available) -->
+  <!--
+  <ItemGroup>
+    <Reference Include="RithmicAPI">
+      <HintPath>..\..\..\lib\RithmicAPI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  -->
+
+</Project>
