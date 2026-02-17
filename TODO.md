@@ -12,12 +12,37 @@
 | Market Data Adapter | ✅ Complete | Mock price feed for ES, NQ, YM, CL, GC |
 | Order Execution | ✅ Complete | All order types supported (mock mode) |
 | Account Tracking | ✅ Complete | Position and account tracking ready |
-| Strategy Engine | 🚧 In Progress | Next: Fully automated strategy |
-| Risk Management | 📝 Planned | Position sizing, stops, limits |
+| Strategy Engine | ✅ Complete | Fully automated strategy implemented |
+| Risk Management | ✅ Structure | Position sizing, stops, limits ready |
 | Discord Integration | ✅ Partial | Notifications exist in improvement engine |
+| **Windows Container** | ✅ Complete | Docker files, deployment scripts, Azure support |
+| **Linux Native (IBKR)** | ✅ Complete | Documentation and adapter design |
+| **Linux Native (Tradovate)** | ✅ Complete | REST API documentation |
 | Continuous Improvement | ⏸️ Paused | Awaiting real trade data logging |
 
-**Current Focus:** Building the Fully Automated Strategy Engine
+**Current Focus:** Windows Container Deployment with NinjaTrader DLL
+
+---
+
+## 🏗️ Deployment Options Available
+
+### 1. Windows Containers (RECOMMENDED for NinjaTrader)
+- ✅ Full NT DLL support
+- ✅ Deploy to Azure, AWS, GCP
+- ✅ One container per market
+- 📍 See: `docs/WINDOWS_CONTAINER_DEPLOYMENT.md`
+
+### 2. Linux Native (Interactive Brokers)
+- ✅ No Windows needed
+- ✅ Lower cost
+- ⚠️ Different broker
+- 📍 See: `docs/LINUX_NATIVE_DEPLOYMENT.md`
+
+### 3. Linux Native (Tradovate)
+- ✅ Pure REST API
+- ✅ Simplest setup
+- ⚠️ Web-based platform
+- 📍 See: `docs/LINUX_NATIVE_DEPLOYMENT.md`
 
 ---
 
