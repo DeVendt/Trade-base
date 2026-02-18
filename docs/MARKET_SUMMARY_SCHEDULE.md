@@ -2,11 +2,12 @@
 
 ## Schedule Overview
 
+**Timezone:** Amsterdam (CET/CEST) 🇳🇱  
 Three automated briefings will be sent to you each trading day (Monday-Friday):
 
 ### 🌏 Asia Session Summary
-**Time:** 3:00 AM EST (end of Asia session)  
-**Covers:** 7:00 PM - 3:00 AM EST  
+**Time:** 9:00 AM Amsterdam (3:00 AM EST)  
+**Covers:** Asia session (7:00 PM - 3:00 AM EST)  
 **Focus:**
 - Overnight futures moves (ES, NQ, YM)
 - Asian economic data and news
@@ -16,8 +17,8 @@ Three automated briefings will be sent to you each trading day (Monday-Friday):
 ---
 
 ### 🇪🇺 Europe Session Summary  
-**Time:** 9:30 AM EST (US market open / Europe close)  
-**Covers:** 3:00 AM - 9:30 AM EST  
+**Time:** 3:30 PM Amsterdam (9:30 AM EST)  
+**Covers:** Europe session (3:00 AM - 9:30 AM EST)  
 **Focus:**
 - European session futures action
 - EU economic releases
@@ -27,8 +28,8 @@ Three automated briefings will be sent to you each trading day (Monday-Friday):
 ---
 
 ### 🇺🇸 US Session Summary
-**Time:** 4:00 PM EST (US market close)  
-**Covers:** 9:30 AM - 4:00 PM EST  
+**Time:** 10:00 PM Amsterdam (4:00 PM EST)  
+**Covers:** US session (9:30 AM - 4:00 PM EST)  
 **Focus:**
 - Full US session recap
 - Economic data and Fed news
@@ -53,13 +54,21 @@ Each summary will include:
 
 ## Time Zone Reference
 
-All times in **America/New_York (EST/EDT)**
+All times in **Amsterdam (CET/CEST)** 🇳🇱
 
-| Session | Start | End | Summary Time |
-|---------|-------|-----|--------------|
-| Asia | 7:00 PM | 3:00 AM | 3:00 AM |
-| Europe | 3:00 AM | 9:30 AM | 9:30 AM |
-| US | 9:30 AM | 4:00 PM | 4:00 PM |
+| Session | Start (AMS) | End (AMS) | Summary Time |
+|---------|-------------|-----------|--------------|
+| Asia | 1:00 AM | 9:00 AM | **9:00 AM** |
+| Europe | 9:00 AM | 3:30 PM | **3:30 PM** |
+| US | 3:30 PM | 10:00 PM | **10:00 PM** |
+
+### Reference: Amsterdam vs New York
+
+| Amsterdam | New York | Session |
+|-----------|----------|---------|
+| 9:00 AM | 3:00 AM | Asia close |
+| 3:30 PM | 9:30 AM | Europe close / US open |
+| 10:00 PM | 4:00 PM | US close |
 
 ---
 
@@ -88,11 +97,13 @@ All times in **America/New_York (EST/EDT)**
 
 ---
 
-## Next Runs
+## Next Runs (Amsterdam Time)
 
-- **Asia Summary:** Tomorrow at 3:00 AM EST
-- **Europe Summary:** Tomorrow at 9:30 AM EST
-- **US Summary:** Tomorrow at 4:00 PM EST
+- **Asia Summary:** Tomorrow at 9:00 AM 🇳🇱
+- **Europe Summary:** Tomorrow at 3:30 PM 🇳🇱
+- **US Summary:** Tomorrow at 10:00 PM 🇳🇱
+
+*Note: Automatically adjusts for Daylight Saving Time changes*
 
 ---
 
