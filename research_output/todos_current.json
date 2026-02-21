@@ -1,0 +1,57 @@
+{
+  "todos": [
+    {
+      "id": "TODO-20260221-001",
+      "domain": "futures",
+      "title": "Research FUTURES strategies and document findings",
+      "description": "Deep research on futures for futures trading. Document strategies, indicators, and best practices in docs/strategies/futures.md",
+      "priority": "high",
+      "created_at": "2026-02-21T20:14:50.228457",
+      "due_by": "2026-02-24T20:14:50.228481",
+      "status": "open"
+    },
+    {
+      "id": "TODO-20260221-002",
+      "domain": "documentation",
+      "title": "Update general documentation",
+      "description": "Update documentation with today's research on general. Add new insights to appropriate docs.",
+      "priority": "high",
+      "created_at": "2026-02-21T20:14:50.228495",
+      "due_by": "2026-02-23T20:14:50.228502",
+      "status": "open"
+    },
+    {
+      "id": "TODO-20260221-003",
+      "domain": "strategy",
+      "title": "Review and refine trading strategy rules",
+      "description": "Based on research findings, review current strategy implementation. Identify improvements for entry/exit rules, risk parameters, or position sizing.",
+      "priority": "medium",
+      "created_at": "2026-02-21T20:14:50.228512",
+      "due_by": "2026-02-26T20:14:50.228519",
+      "status": "open"
+    },
+    {
+      "id": "TODO-20260221-004",
+      "domain": "implementation",
+      "title": "Implement researched techniques in codebase",
+      "description": "If research reveals useful techniques (indicators, patterns, risk methods), create implementation tickets or prototype code.",
+      "priority": "medium",
+      "created_at": "2026-02-21T20:14:50.228528",
+      "due_by": "2026-02-28T20:14:50.228535",
+      "status": "open"
+    },
+    {
+      "id": "TODO-20260221-005",
+      "domain": "testing",
+      "title": "Backtest new strategy ideas",
+      "description": "Take promising strategy ideas from research and backtest them on historical data. Document results.",
+      "priority": "low",
+      "created_at": "2026-02-21T20:14:50.228550",
+      "due_by": "2026-02-28T20:14:50.228558",
+      "status": "open"
+    }
+  ],
+  "completed": [],
+  "updated_at": "2026-02-21T20:14:50.228572",
+  "cycle_count": 1
+}
